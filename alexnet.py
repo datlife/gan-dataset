@@ -17,6 +17,7 @@ def alexnet(pretrained=False, **kwargs):
 
 def preprocessor():
     data_transforms = tv.transforms.Compose([
+                        tv.transforms.ToPILImage(),
                         tv.transforms.Resize(256),
                         tv.transforms.CenterCrop(224),
                         tv.transforms.ToTensor(),
