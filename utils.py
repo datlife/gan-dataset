@@ -30,7 +30,7 @@ def get_video_ids(csv_path=None, category='car', min_area=0.1, max_area=0.3, thr
         if area.any() is False:
             return False
         else:
-            small_areas = area[area == True]
+            small_areas = area[area is True]
             is_good = (len(small_areas) / (1.0 * len(area))) >= threshold
             return is_good
 
@@ -41,3 +41,4 @@ def get_video_ids(csv_path=None, category='car', min_area=0.1, max_area=0.3, thr
                                                   threshold=threshold)).groupby('youtube_id')
 
     return grouped
+

@@ -6,15 +6,6 @@ __all__ = ['AlexNet', 'alexnet']
 model_urls = {'alexnet': 'https://download.pytorch.org/models/alexnet-owt-4df8aa71.pth',}
 
 
-def alexnet(pretrained=False, **kwargs):
-    model = AlexNet(**kwargs)
-    if pretrained:
-        model.load_state_dict(
-            model_zoo.load_url(model_urls['alexnet'])
-        )
-    return model
-
-
 def preprocessor():
     data_transforms = tv.transforms.Compose([
                         tv.transforms.ToPILImage(),
@@ -25,6 +16,58 @@ def preprocessor():
                                                 [0.229, 0.224, 0.225])
                       ])
     return data_transforms
+
+
+def alexnet_conv3(pretrained=True, **kwargs):
+    model = AlexNetConv3(**kwargs)
+
+    if pretrained:
+        original_alexnet_weights = model_zoo.load_url(model_urls['alexnet'])
+
+        # Filter weights
+        model_dict = model.state_dict()
+
+        # filter out unnecessary keys
+        filtered_dict = {k: v for k, v in original_alexnet_weights.items() if k in model_dict}
+
+        # overwrite entries in the existing state dict
+        model_dict.update(filtered_dict)
+
+        # load the new state dict
+        model.load_state_dict(filtered_dict)
+
+    return model
+
+
+class AlexNetConv3(nn.Module):
+
+    def __init__(self):
+        super(AlexNetConv3, self).__init__()
+
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 64, 11, 4, 2),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(3, 2),
+            nn.Conv2d(64, 192, kernel_size=5, padding=2),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(3, 2),
+            nn.Conv2d(192, 384, 3, 1),
+            nn.ReLU(inplace=True)
+        )
+
+    def forward(self, x):
+        features_map = self.features(x)
+        return features_map
+
+
+def alexnet(pretrained=False, **kwargs):
+    model = AlexNet(**kwargs)
+
+    if pretrained:
+        model.load_state_dict(
+            model_zoo.load_url(model_urls['alexnet'])
+        )
+    return model
 
 
 class AlexNet(nn.Module):
@@ -66,3 +109,4 @@ class AlexNet(nn.Module):
         x = self.classifier(x)
 
         return x
+
