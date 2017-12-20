@@ -9,6 +9,9 @@
             grid-template-columns: 1fr 1fr;
             grid-column-gap: 1em;
         }
+        .Gallery h3{
+            text-align: center;
+        }
         .Gallery .item{
             padding: 1em 0em;
         }
@@ -21,9 +24,9 @@
     </style>
 </head>
 <body>
-    <h3> Visualization </h3>
     <div class='Gallery'>
-       {% for image_src  in data %}
+        <h3> Visualization </h3>
+       {% for image_src  in image_paths %}
             <div class="item">
                 <img src='{{image_src}}' />
                 <div class="desc">{{image_src}}</div>

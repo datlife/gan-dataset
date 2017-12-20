@@ -1,6 +1,7 @@
 import os
 import cv2
 import time
+import random
 import numpy as np
 import pandas as pd
 
@@ -23,7 +24,7 @@ object_anno_fields     = ['object_id', 'object_duration', 'current_frame',
 def _main_():
 
     # PARAMTERS
-    CHUNK        = 70
+    CHUNK        = 50
     OFFSET       = 150
     SKIP_FRAMES  = 5
     OUTPUT_DIR   = '/media/dat/dataset/VIRAT/outputs'
@@ -45,13 +46,15 @@ def _main_():
     video_files = [os.path.splitext(x)[0] for x in video_files]
 
     print("Found %s videos in VIRAT directory" % len(video_files))
+    videos = dict()
 
-    for video in video_files:
+    for video in video_files[0:10]:
 
         video_file = video.split('_')
         video_file = "_".join(video_file[:3])
         video_path = os.path.join(DEFAULT_VIDEO_DIR, video + '.mp4')
 
+        videos[video_file] = dict()
         # ######################
         # LOAD VIRAT INTO PANDAS
         # ######################
@@ -122,6 +125,7 @@ def _main_():
                 print("Object in this group is stationary. Skip")
                 continue
 
+            videos[video_file][group_id] = dict()
             SUB_SEQ_DIR = os.path.join(CURR_VIDEO_DIR, 'object_' + str(group_id))
             if not os.path.isdir(SUB_SEQ_DIR):
                 os.mkdir(SUB_SEQ_DIR)
@@ -154,6 +158,7 @@ def _main_():
                     os.mkdir(CURR_SEQUENCE_DIR)
 
                 image_paths = []
+                overview_paths = []
                 for idx, (p1, p2) in enumerate(bbox_chunk):
                     # Format file name
                     filename = OUTPUT_FORMAT.format(video_file, i, idx)
@@ -182,17 +187,29 @@ def _main_():
 
                     # For writing HTMl file
                     image_paths.append(filename)
-                    # processed_frames.append(frame)
-
-                writeHTML(os.path.join(CURR_SEQUENCE_DIR, 'result.html'), image_paths)
+                    overview_paths.append(saved_path)
+                random.shuffle(image_paths)
+                writeHTML(filename=os.path.join(CURR_SEQUENCE_DIR, 'result.html'),
+                          html_template='subset_gallery.html',
+                          image_paths=image_paths)
 
                 # save annotation file
                 labels = grouped_objects.get_group(group_id).iloc[start_frame + i*CHUNK:
                                                                   start_frame + + i*CHUNK + len(bbox_chunk)]
+
                 labels.to_csv(os.path.join(CURR_SEQUENCE_DIR, 'labels.csv'))
+
+                # For generating overview of the dataset
+
+                videos[video_file][group_id][i] = overview_paths
 
             print("Done in {}".format(time.time() - start))
             cap.release()
+
+    # Output Overview
+    writeHTML(filename=os.path.join(OUTPUT_DIR, 'overview.html'),
+              html_template='overview.html',
+              videos=videos)
 
 
 if __name__ == "__main__":

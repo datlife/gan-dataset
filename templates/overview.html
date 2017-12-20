@@ -8,20 +8,23 @@
             width: 100%;
         }
 
-        .Gallery {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            grid-column-gap: 1em;
+        .Gallery h3{
             text-align: center;
         }
 
         .Gallery .Video {
-            padding: 2em 0em;
+            padding: 0em 0em 5em 0em;
+            border-bottom: 0.1em solid black;
         }
 
         .Gallery .Video .Object .Sequence{
-            display:grid;
+             display: grid;
+             grid-template-columns: repeat(15, 1fr);
+             padding: 0 0 2em 0;
+        }
 
+        .Gallery .Video .Object .Sequence:nth-child(even){
+            background: #cccc;
         }
 
     </style>
@@ -30,25 +33,25 @@
 <div class='Gallery'>
     <h3> Overview of GAN Dataset </h3>
     {% for id, _ in videos.items() %}
-    <div class="Video">
-        <h4>{{id}}</h4>
+        {% if videos[id].items() %}
+            <div class="Video">
+                <h4>{{id}}</h4>
+                {% for obj_id, _ in videos[id].items() %}
+                <div class="Object">
+                    <h4>{{obj_id}}</h4>
+                    {% for seq_id, _ in videos[id][obj_id].items() %}
+                    <div class="Sequence">
+                        <!--{{videos[id][obj_id][seq_id]|length}}-->
+                        {% for image in videos[id][obj_id][seq_id][0:20] %}
+                           <div> <img src='{{image}}'/></div>
+                        {% endfor %}
+                    </div>
 
-        {% for obj_id, _ in video[id].items() %}
-        <div class="Object">
-            <h4>{{obj_id}}</h4>
-            {% for seq_id, _ in video[id][obj_id].items() %}
-            <div class="Sequence"
-                 style="{display: grid; grid-template-columns: repeat(); }">
-                {% for image in video[id][obj_id][seq_id] %}
-                    <img src='{{image}}'/>
-                    <div class="desc">{{image}}</div>
+                    {% endfor %}
+                </div>
                 {% endfor %}
             </div>
-
-            {% endfor %}
-        </div>
-        {% endfor %}
-    </div>
+        {% endif %}
     {% endfor %}
 
 </div>
