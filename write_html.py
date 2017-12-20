@@ -1,36 +1,19 @@
 
 import os
-import re
-import numpy as np
-import math
-import time
+import sys
+from jinja2 import Environment, FileSystemLoader
 
 
-def writeHTML(file_name, im_paths, captions, height=200, width=200):
-    f=open(file_name, 'w')
-    html=[]
-    f.write('<!DOCTYPE html>\n')
-    f.write('<html><body>\n')
-    f.write('<table>\n')
-    for row in range(len(im_paths)):
-        f.write('<tr>\n')
-        for col in range(len(im_paths[row])):
-            f.write('<td>')
-            f.write(captions[row][col])
-            f.write('</td>')
-            f.write('    ')
-        f.write('\n</tr>\n')
+def writeHTML(filename, html_template=None, **kwargs):
+    env             = Environment(loader=FileSystemLoader(os.path.join(sys.path[0], 'templates')))
+    template        = env.get_template(html_template)
 
-        f.write('<tr>\n')
-        for col in range(len(im_paths[row])):
-            f.write('<td><img src="')
-            f.write(im_paths[row][col])
-            f.write('" height='+str(height)+' width='+str(width)+'"/></td>')
-            f.write('    ')
-        f.write('\n</tr>\n')
-        f.write('<p></p>')
-    f.write('</table>\n')
-    f.close()
+    # every day I am shuffling!..
+    parsed_template = template.render(**kwargs)
+
+    # to save the results
+    with open(filename, "w") as fh:
+        fh.write(parsed_template)
 
 
 def relative_path(ref_path, target_path):
