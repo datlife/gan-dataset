@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Overview of Dataset</title>
+    <style type="text/css">
+        img {
+            width: 100%;
+        }
+
+        .Gallery {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-column-gap: 1em;
+            text-align: center;
+        }
+
+        .Gallery .Video {
+            padding: 2em 0em;
+        }
+
+        .Gallery .Video .Object .Sequence{
+            display:grid;
+
+        }
+
+    </style>
+</head>
+<body>
+<div class='Gallery'>
+    <h3> Overview of GAN Dataset </h3>
+    {% for id, _ in videos.items() %}
+    <div class="Video">
+        <h4>{{id}}</h4>
+
+        {% for obj_id, _ in video[id].items() %}
+        <div class="Object">
+            <h4>{{obj_id}}</h4>
+            {% for seq_id, _ in video[id][obj_id].items() %}
+            <div class="Sequence"
+                 style="{display: grid; grid-template-columns: repeat(); }">
+                {% for image in video[id][obj_id][seq_id] %}
+                    <img src='{{image}}'/>
+                    <div class="desc">{{image}}</div>
+                {% endfor %}
+            </div>
+
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+
+</div>
+</body>
+
+</html>
