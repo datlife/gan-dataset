@@ -1,7 +1,6 @@
 import os
 import cv2
 import time
-import random
 import numpy as np
 import pandas as pd
 
@@ -31,9 +30,6 @@ def _main_():
     DEFAULT_PATH = '/media/dat/dataset/VIRAT'
 
     # Naming Convention for the image output file
-    # {0}: original video file name
-    # {1}: chunk number
-    # {2}: current frame
     OUTPUT_FORMAT = '{0}_{1}_{2}.png'
 
     DEFAULT_ANNOTATION_DIR = os.path.join(DEFAULT_PATH, 'annotations')
@@ -45,8 +41,8 @@ def _main_():
     video_files = os.listdir(DEFAULT_VIDEO_DIR)
     video_files = [os.path.splitext(x)[0] for x in video_files]
 
-    print("Found %s videos in VIRAT directory" % len(video_files))
-    videos = dict()
+    print("Found %s videos in current directory" % len(video_files))
+    html_data = dict()
 
     for video in video_files[0:10]:
 
@@ -54,46 +50,50 @@ def _main_():
         video_file = "_".join(video_file[:3])
         video_path = os.path.join(DEFAULT_VIDEO_DIR, video + '.mp4')
 
-        videos[video_file] = dict()
+        # save data for generating HTML file later
+        html_data[video_file] = dict()
+
+        # ###############
+        # Load Video file
+        # ###############
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            raise IOError("Please check video path %s" % video_path)
+
         # ######################
-        # LOAD VIRAT INTO PANDAS
+        # Load annotation file
         # ######################
         anno_path = os.path.join(DEFAULT_ANNOTATION_DIR, video + '.viratdata.objects.txt')
         if not os.path.isfile(anno_path):
             print("Cannot file annotation file for %s. Skipping" % anno_path)
-            continue
+            continue  # iterate to next video
 
         df = pd.read_csv(anno_path, delim_whitespace=True, names=object_anno_fields)
 
         # ###############################
         # SKIP FRAMES TO VISUALIZE EASIER
-        # ################################
-        # @TODO: may need to remove lat
+        # ###############################
+        # @TODO: may need to remove later
         df = df.iloc[::SKIP_FRAMES, :]
 
-        # #####################################
-        # PARSE EACH OBJECT IN VIDEO INTO GROUP
-        # #####################################
-        # Condition:
-        #     1. Object type is in SELECTED_OBJECT_TYPE (Car, vehicle)
+        # ############################################
+        # Filter out object that is not car or vehicle
+        # ###########################################
         object_bboxes = []
-        temp_frames = []
-
+        temp_frames   = []
         for _, obj in df.groupby('object_id'):
 
             object_type = obj['object_type'].values[0]
-
             if object_type not in SELECTED_OBJECT_TYPE:
                 continue
 
-            # print("Found a %s in %s" % (OBJECT_TYPES[object_type], video))
-            # Extract the bounding boxes
-            upper_left_pts = zip(obj['left_top_x'].values, obj['left_top_y'].values)
+            # Convert (x, y, w, h) to (x1, y1, x2, y2)
+            upper_left_pts   = zip(obj['left_top_x'].values, obj['left_top_y'].values)
             width_height_lst = zip(obj['width'].values, obj['height'].values)
+            lower_right_pts  = [(px + w, py + h)
+                                for (px, py), (w, h) in zip(upper_left_pts, width_height_lst)]
 
-            lower_right_pts = [(px + w, py + h)
-                               for (px, py), (w, h) in zip(upper_left_pts, width_height_lst)]
-
+            # Reformat bboxes to opencv format
             bbox_list = [[(px1, py1), (px2, py2)]
                          for px1, py1, (px2, py2) in zip(obj['left_top_x'].values,
                                                          obj['left_top_y'].values,
@@ -102,50 +102,53 @@ def _main_():
                 object_bboxes.append(bbox_list)
                 temp_frames.append(obj)
 
-        print("Number of annotated objects in the video %s"%len(object_bboxes))
+        print("Number of objects in the video %s" % len(object_bboxes))
         grouped_objects = pd.concat(temp_frames).groupby('object_id')
 
         CURR_VIDEO_DIR = os.path.join(OUTPUT_DIR, video_file)
         if not os.path.isdir(CURR_VIDEO_DIR):
             os.mkdir(CURR_VIDEO_DIR)
 
-        for idx, group_id in enumerate(grouped_objects.groups):
-            bboxes_of_object = object_bboxes[idx]
+        # ############################
+        # Process Each Object in video
+        # ############################
+        for idx, object_id in enumerate(grouped_objects.groups):
 
-            # ##################################
-            # FILTER GROUP HAS STATIONARY OBJECT
-            # ##################################
-            cut_off_idx = cut_off_frame(bboxes_of_object, duration=CHUNK)
+            # ############################
+            # Filter out stationary frames
+            #    e.g: car is parking
+            # ############################
+            bboxes = object_bboxes[idx]
+            cut_off_idx = cut_off_frame(bboxes, duration=CHUNK)
             if cut_off_idx:
-                bbox_arr = np.asarray(bboxes_of_object[:cut_off_idx])
-                num_chunk = int(len(bbox_arr) / CHUNK)
+                bbox_arr    = np.asarray(bboxes[:cut_off_idx])
+                num_chunk   = int(len(bbox_arr) / CHUNK)
                 bbox_chunks = np.array_split(bbox_arr, num_chunk)
-
             else:
                 print("Object in this group is stationary. Skip")
                 continue
 
-            videos[video_file][group_id] = dict()
-            SUB_SEQ_DIR = os.path.join(CURR_VIDEO_DIR, 'object_' + str(group_id))
+            html_data[video_file][object_id] = dict()
+            SUB_SEQ_DIR = os.path.join(CURR_VIDEO_DIR, 'object_' + str(object_id))
             if not os.path.isdir(SUB_SEQ_DIR):
                 os.mkdir(SUB_SEQ_DIR)
 
-            appear_frames = grouped_objects.get_group(group_id)['current_frame'].values
+            # ############################
+            # Find the first frame
+            # ############################
+            appear_frames = grouped_objects.get_group(object_id)['current_frame'].values
             start_frame   = np.min(appear_frames)
 
-            cap = cv2.VideoCapture(video_path)
-            if not cap.isOpened():
-                raise IOError("Please check video path %s" % video_path)
-
             # Generate a image mask, size of the clip's dimension
+            # Visualization only
             _, frame = cap.read()
             empty_mask = np.zeros_like(frame)
-            object_trajectory = generate_object_trajectory(empty_mask, bboxes_of_object,
+            object_trajectory = generate_object_trajectory(empty_mask, bboxes,
                                                            color=Color.green,
                                                            opacity=60)
 
             start = time.time()
-            print("Processing object %s of %s" % (group_id, video_file))
+            print("Processing object %s of %s" % (object_id, video_file))
 
             for i, bbox_chunk in enumerate(tqdm(bbox_chunks)):
                 focused_area_mask, top_pts, bot_pts = generate_focused_area_mask(empty_mask,
@@ -154,6 +157,7 @@ def _main_():
                                                                                  offset=OFFSET)
 
                 CURR_SEQUENCE_DIR = os.path.join(SUB_SEQ_DIR, str(i))
+
                 if not os.path.isdir(CURR_SEQUENCE_DIR):
                     os.mkdir(CURR_SEQUENCE_DIR)
 
@@ -188,20 +192,20 @@ def _main_():
                     # For writing HTMl file
                     image_paths.append(filename)
                     overview_paths.append(saved_path)
-                random.shuffle(image_paths)
+
+                # save annotation file to current sub directory
+                labels = grouped_objects.get_group(object_id).iloc[start_frame + i*CHUNK:
+                                                                  start_frame + i*CHUNK + len(bbox_chunk)]
+                labels.to_csv(os.path.join(CURR_SEQUENCE_DIR, 'labels.csv'))
+
+                # random.shuffle(image_paths)
+                # random.shuffle(overview_paths)
                 writeHTML(filename=os.path.join(CURR_SEQUENCE_DIR, 'result.html'),
                           html_template='subset_gallery.html',
                           image_paths=image_paths)
 
-                # save annotation file
-                labels = grouped_objects.get_group(group_id).iloc[start_frame + i*CHUNK:
-                                                                  start_frame + + i*CHUNK + len(bbox_chunk)]
-
-                labels.to_csv(os.path.join(CURR_SEQUENCE_DIR, 'labels.csv'))
-
-                # For generating overview of the dataset
-
-                videos[video_file][group_id][i] = overview_paths
+                # Save all the paths fo
+                html_data[video_file][object_id][i] = overview_paths
 
             print("Done in {}".format(time.time() - start))
             cap.release()
@@ -209,7 +213,7 @@ def _main_():
     # Output Overview
     writeHTML(filename=os.path.join(OUTPUT_DIR, 'overview.html'),
               html_template='overview.html',
-              videos=videos)
+              videos=html_data)
 
 
 if __name__ == "__main__":

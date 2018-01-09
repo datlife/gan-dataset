@@ -20,7 +20,7 @@ def cut_off_frame(bboxes, duration=50):
     upper_grad = np.sum(np.abs(rate_of_change[:, 0]), axis=1)
     lower_grad = np.sum(np.abs(rate_of_change[:, 1]), axis=1)
 
-    # Calcuate rate of change at every duration
+    # Calculate rate of change at every duration
     upper_rate = np.add.reduceat(upper_grad, np.arange(0, len(upper_grad), duration))
     lower_rate = np.add.reduceat(lower_grad, np.arange(0, len(lower_grad), duration))
 
@@ -28,12 +28,15 @@ def cut_off_frame(bboxes, duration=50):
     for idx, rate in enumerate(bbox_rate):
         if rate == 0:
             break
+
     bbox_rate = bbox_rate[:idx]
     return len(bbox_rate) * duration
 
 
 def generate_focused_area_mask(image, boxes_list, offset, color, thickness=5):
-    '''Gernate crop area'''
+    '''
+    Gernate crop area
+    '''
 
     bboxes = np.array(boxes_list)
     height, width, _ = image.shape
