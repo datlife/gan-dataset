@@ -26,8 +26,8 @@ def _main_():
     CHUNK        = 50
     OFFSET       = 150
     SKIP_FRAMES  = 5
-    OUTPUT_DIR   = '/media/dat/dataset/VIRAT/outputs'
-    DEFAULT_PATH = '/media/dat/dataset/VIRAT'
+    OUTPUT_DIR   = '/media/dat/dataset1/VIRAT/outputs'
+    DEFAULT_PATH = '/media/dat/dataset1/VIRAT'
 
     # Naming Convention for the image output file
     OUTPUT_FORMAT = '{0}_{1}_{2}.png'
@@ -58,7 +58,7 @@ def _main_():
         # ###############
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
-            raise IOError("Please check video path %s" % video_path)
+            raise IOError("Cannot open %s" % video_path)
 
         # ######################
         # Load annotation file
@@ -197,9 +197,6 @@ def _main_():
                 labels = grouped_objects.get_group(object_id).iloc[start_frame + i*CHUNK:
                                                                   start_frame + i*CHUNK + len(bbox_chunk)]
                 labels.to_csv(os.path.join(CURR_SEQUENCE_DIR, 'labels.csv'))
-
-                # random.shuffle(image_paths)
-                # random.shuffle(overview_paths)
                 writeHTML(filename=os.path.join(CURR_SEQUENCE_DIR, 'result.html'),
                           html_template='subset_gallery.html',
                           image_paths=image_paths)
