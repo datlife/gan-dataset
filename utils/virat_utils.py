@@ -2,9 +2,8 @@ import numpy as np
 import cv2
 
 
-def cut_off_frame(bboxes, duration=50):
-    """
-    Filter out stationary object (object no longer moving)
+def check_stationary_objects(bboxes, duration=50):
+    """Filter out stationary object (e.g car is parking)
 
     Ags:
       bboxes   - a numpy array shape (num_bboxes, 2, 2)
@@ -28,15 +27,20 @@ def cut_off_frame(bboxes, duration=50):
     for idx, rate in enumerate(bbox_rate):
         if rate == 0:
             break
-
     bbox_rate = bbox_rate[:idx]
     return len(bbox_rate) * duration
 
 
-def generate_focused_area_mask(image, boxes_list, offset, color, thickness=5):
-    '''
-    Gernate crop area
-    '''
+def zoom_in_object(image, boxes_list, offset, color, thickness=5):
+    """ Generate crop area
+
+    :param image:
+    :param boxes_list:
+    :param offset:
+    :param color:
+    :param thickness:
+    :return:
+    """
 
     bboxes = np.array(boxes_list)
     height, width, _ = image.shape
@@ -57,9 +61,14 @@ def generate_focused_area_mask(image, boxes_list, offset, color, thickness=5):
 
 
 def generate_object_trajectory(image, boxes_list, color, opacity=50):
-    '''
-    Visualize object path on video using list of boxes from ground truths
-    '''
+    """Visualize object path on video using list of boxes from ground truths
+
+    :param image:
+    :param boxes_list:
+    :param color:
+    :param opacity:
+    :return:
+    """
     copied_img = np.copy(image)
     transparency = opacity / 100.
     for (p1, p2) in boxes_list:
@@ -76,7 +85,9 @@ def generate_object_trajectory(image, boxes_list, color, opacity=50):
 
 
 class Color(object):
-    '''Simple Color Mapper'''
+    """Color Mapper
+
+    """
     red = [255, 0, 0]
     green = [0, 255, 0]
     blue = [0, 0, 255]
